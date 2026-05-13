@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Launching Tonight</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=Hind+Siliguri:wght@300;400;600&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --bg: #050510;
+    --primary: #7c3aed;
+    --accent: #f59e0b;
+    --glow: #a855f7;
+    --text: #f1f5f9;
+    --muted: #94a3b8;
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Hind Siliguri', sans-serif;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    position: relative;
+  }
+
+  /* Animated background */
+  .bg-orb {
+    position: fixed;
+    border-radius: 50%;
+    filter: blur(80px);
+    opacity: 0.25;
+    animation: drift 8s ease-in-out infinite alternate;
+  }
+  .bg-orb.one {
+    width: 500px; height: 500px;
+    background: radial-gradient(circle, #7c3aed, transparent);
+    top: -100px; left: -100px;
+    animation-delay: 0s;
+  }
+  .bg-orb.two {
+    width: 400px; height: 400px;
+    background: radial-gradient(circle, #f59e0b, transparent);
+    bottom: -80px; right: -80px;
+    animation-delay: -4s;
+  }
+  .bg-orb.three {
+    width: 300px; height: 300px;
+    background: radial-gradient(circle, #06b6d4, transparent);
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    animation-delay: -2s;
+  }
+
+  @keyframes drift {
+    from { transform: translate(0, 0) scale(1); }
+    to   { transform: translate(30px, 20px) scale(1.1); }
+  }
+
+  /* Grid texture */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(124,58,237,0.04) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(124,58,237,0.04) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+  }
+
+  .container {
+    position: relative;
+    z-index: 10;
+    text-align: center;
+    padding: 2rem;
+    max-width: 680px;
+    width: 100%;
+    animation: fadeUp 1s ease both;
+  }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(40px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(124,58,237,0.15);
+    border: 1px solid rgba(124,58,237,0.4);
+    border-radius: 100px;
+    padding: 6px 18px;
+    font-size: 0.75rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: #c4b5fd;
+    margin-bottom: 2rem;
+    animation: fadeUp 1s 0.2s ease both;
+  }
+  .badge .dot {
+    width: 7px; height: 7px;
+    background: #a855f7;
+    border-radius: 50%;
+    animation: pulse 1.5s ease infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.4; transform: scale(0.7); }
+  }
+
+  h1 {
+    font-family: 'Syne', sans-serif;
+    font-size: clamp(2.8rem, 8vw, 5.5rem);
+    font-weight: 800;
+    line-height: 1.05;
+    letter-spacing: -0.02em;
+    margin-bottom: 1rem;
+    animation: fadeUp 1s 0.3s ease both;
+  }
+
+  h1 span.highlight {
+    background: linear-gradient(135deg, #f59e0b, #ef4444);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .subtitle {
+    font-size: 1.1rem;
+    color: var(--muted);
+    margin-bottom: 3rem;
+    line-height: 1.7;
+    animation: fadeUp 1s 0.4s ease both;
+  }
+
+  /* Countdown */
+  .countdown-wrapper {
+    display: flex;
+    justify-content: center;
+    gap: 1rem;
+    margin-bottom: 3rem;
+    animation: fadeUp 1s 0.5s ease both;
+    flex-wrap: wrap;
+  }
+
+  .time-block {
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 16px;
+    padding: 1.2rem 1.5rem;
+    min-width: 90px;
+    position: relative;
+    overflow: hidden;
+    transition: border-color 0.3s;
+  }
+  .time-block::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, rgba(124,58,237,0.1), transparent);
+    opacity: 0;
+    transition: opacity 0.3s;
+  }
+  .time-block:hover::before { opacity: 1; }
+  .time-block:hover { border-color: rgba(124,58,237,0.5); }
+
+  .time-num {
+    font-family: 'Syne', sans-serif;
+    font-size: 2.8rem;
+    font-weight: 800;
+    line-height: 1;
+    background: linear-gradient(180deg, #fff, #a855f7);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    display: block;
+  }
+  .time-label {
+    font-size: 0.65rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-top: 6px;
+    display: block;
+  }
+
+  .separator {
+    font-family: 'Syne', sans-serif;
+    font-size: 2.5rem;
+    font-weight: 800;
+    color: rgba(168,85,247,0.4);
+    align-self: center;
+    margin-top: -10px;
+    animation: blink 1s step-end infinite;
+  }
+  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
+
+  /* Launch time pill */
+  .launch-time {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    background: linear-gradient(135deg, rgba(245,158,11,0.15), rgba(239,68,68,0.1));
+    border: 1px solid rgba(245,158,11,0.35);
+    border-radius: 100px;
+    padding: 10px 24px;
+    font-size: 1rem;
+    font-weight: 600;
+    color: #fcd34d;
+    margin-bottom: 2.5rem;
+    animation: fadeUp 1s 0.6s ease both;
+  }
+  .launch-time .icon { font-size: 1.2rem; }
+
+  /* Bengali tagline */
+  .tagline {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: var(--text);
+    margin-bottom: 0.5rem;
+    animation: fadeUp 1s 0.7s ease both;
+  }
+  .tagline-sub {
+    font-size: 0.9rem;
+    color: var(--muted);
+    animation: fadeUp 1s 0.8s ease both;
+  }
+
+  /* Shimmer line */
+  .shimmer-line {
+    height: 2px;
+    background: linear-gradient(90deg, transparent, #7c3aed, #f59e0b, transparent);
+    border-radius: 2px;
+    margin: 2.5rem auto;
+    width: 60%;
+    background-size: 200% 100%;
+    animation: shimmer 2.5s linear infinite;
+  }
+  @keyframes shimmer {
+    from { background-position: 200% 0; }
+    to   { background-position: -200% 0; }
+  }
+
+  /* Done state */
+  .done-message {
+    display: none;
+    font-family: 'Syne', sans-serif;
+    font-size: 2rem;
+    font-weight: 800;
+    background: linear-gradient(135deg, #f59e0b, #a855f7);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    animation: fadeUp 0.8s ease both;
+  }
+
+  @media (max-width: 480px) {
+    .time-block { min-width: 70px; padding: 1rem 1rem; }
+    .time-num { font-size: 2.2rem; }
+    .countdown-wrapper { gap: 0.5rem; }
+    .separator { font-size: 2rem; }
+  }
+</style>
+</head>
+<body>
+
+<div class="bg-orb one"></div>
+<div class="bg-orb two"></div>
+<div class="bg-orb three"></div>
+
+<div class="container">
+
+  <div class="badge">
+    <span class="dot"></span>
+    আজকের রাতে • Live Soon
+  </div>
+
+  <h1>কিছু একটা<br><span class="highlight">আসছে।</span></h1>
+
+  <p class="subtitle">আজকের রাতেই সব বদলে যাবে।<br>অপেক্ষার সময় প্রায় শেষ।</p>
+
+  <div class="launch-time">
+    <span class="icon">🕐</span>
+    আজকে রাত ১১:৩০ মিনিটে Launch
+  </div>
+
+  <div class="countdown-wrapper" id="countdown">
+    <div class="time-block">
+      <span class="time-num" id="hours">00</span>
+      <span class="time-label">ঘণ্টা</span>
+    </div>
+    <span class="separator">:</span>
+    <div class="time-block">
+      <span class="time-num" id="minutes">00</span>
+      <span class="time-label">মিনিট</span>
+    </div>
+    <span class="separator">:</span>
+    <div class="time-block">
+      <span class="time-num" id="seconds">00</span>
+      <span class="time-label">সেকেন্ড</span>
+    </div>
+  </div>
+
+  <div class="shimmer-line"></div>
+
+  <p class="tagline">সাথে থাকুন 🚀</p>
+  <p class="tagline-sub">Tonight at 11:30 PM — Don't miss it.</p>
+
+  <div class="done-message" id="done">🎉 এসে গেছে! Live Now!</div>
+
+</div>
+
+<script>
+  function updateCountdown() {
+    const now = new Date();
+    const launch = new Date();
+    launch.setHours(23, 30, 0, 0);
+
+    const diff = launch - now;
+
+    if (diff <= 0) {
+      document.getElementById('countdown').style.display = 'none';
+      document.getElementById('done').style.display = 'block';
+      return;
+    }
+
+    const h = Math.floor(diff / 3600000);
+    const m = Math.floor((diff % 3600000) / 60000);
+    const s = Math.floor((diff % 60000) / 1000);
+
+    document.getElementById('hours').textContent   = String(h).padStart(2,'0');
+    document.getElementById('minutes').textContent = String(m).padStart(2,'0');
+    document.getElementById('seconds').textContent = String(s).padStart(2,'0');
+  }
+
+  updateCountdown();
+  setInterval(updateCountdown, 1000);
+</script>
+
+</body>
+</html>
