@@ -7,7 +7,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { Toaster, toast } from 'sonner';
 import { motion, AnimatePresence } from 'motion/react';
 import { LogOut, User } from 'lucide-react';
-import { collection, doc, setDoc, deleteDoc, onSnapshot, query, getDocs, writeBatch } from 'firebase/firestore';
+import { collection, doc, setDoc, deleteDoc, onSnapshot, query, getDocs, writeBatch, limit, getDoc } from 'firebase/firestore';
 import { AuthState, TutorStorage, Student, Session, HomeworkItem } from './types';
 import { STUDENTS, STORAGE_KEY, AUTH_STORAGE_KEY } from './constants';
 import { cn } from './lib/utils';
@@ -27,10 +27,25 @@ export default function App() {
 
   // Sync with Firestore
   useEffect(() => {
+    console.log("Firebase Data Sync Effect started. Current Database ID:", db.app.options.projectId);
+    
+    // Explicitly test a write to check permissions
+    const testWrite = async () => {
+      try {
+        const testRef = doc(db, '_connection_test', 'test-' + Date.now());
+        await setDoc(testRef, { timestamp: Date.now(), status: 'testing' });
+        console.log("Firestore Write Test: SUCCESS");
+      } catch (err) {
+        console.error("Firestore Write Test: FAILED", err);
+      }
+    };
+    testWrite();
+
     const sessionsQuery = query(collection(db, 'sessions'));
     const homeworksQuery = query(collection(db, 'homeworks'));
 
     const unsubSessions = onSnapshot(sessionsQuery, (snapshot) => {
+      console.log("Sessions updated from Firestore, count:", snapshot.size);
       setData(prev => {
         const newSessions: { [month: string]: { [date: string]: Session } } = {};
         snapshot.docs.forEach(docSnap => {
@@ -43,15 +58,30 @@ export default function App() {
         return { ...prev, sessions: newSessions };
       });
       setIsDataLoaded(true);
-    }, (err) => handleFirestoreError(err, OperationType.LIST, 'sessions'));
+    }, (err) => {
+      console.error("Sessions Snapshot Error (Details):", {
+        code: (err as any).code,
+        message: err.message,
+        name: err.name,
+      });
+      // handleFirestoreError(err, OperationType.LIST, 'sessions')
+    });
 
     const unsubHomeworks = onSnapshot(homeworksQuery, (snapshot) => {
+      console.log("Homeworks updated from Firestore, count:", snapshot.size);
       const homeworks = snapshot.docs.map(docSnap => ({
         id: docSnap.id,
         ...docSnap.data()
       })) as HomeworkItem[];
       setData(prev => ({ ...prev, homeworks }));
-    }, (err) => handleFirestoreError(err, OperationType.LIST, 'homeworks'));
+    }, (err) => {
+      console.error("Homeworks Snapshot Error (Details):", {
+        code: (err as any).code,
+        message: err.message,
+        name: err.name,
+      });
+      // handleFirestoreError(err, OperationType.LIST, 'homeworks')
+    });
 
     return () => {
       unsubSessions();
