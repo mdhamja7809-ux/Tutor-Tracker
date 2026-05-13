@@ -1,0 +1,8 @@
+{
+  "name": "Tutor Session Tracker",
+  "description": "A beautiful, shared tracker for monitoring tutor visits with calendar views, goal tracking, and persistence.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

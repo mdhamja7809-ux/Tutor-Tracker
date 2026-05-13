@@ -1,0 +1,47 @@
+@import "tailwindcss";
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
+
+@theme {
+  --font-sans: "Poppins", ui-sans-serif, system-ui, sans-serif;
+}
+
+:root {
+  --bg-gradient: linear-gradient(135deg, #0f0c29 0%, #302b63 50%, #24243e 100%);
+}
+
+body {
+  @apply font-sans antialiased text-white min-h-screen;
+  background: var(--bg-gradient);
+  background-attachment: fixed;
+}
+
+@layer components {
+  .glass {
+    @apply bg-white/10 backdrop-blur-lg border border-white/20 shadow-xl;
+  }
+  
+  .glass-dark {
+    @apply bg-black/30 backdrop-blur-xl border border-white/10 shadow-2xl;
+  }
+
+  .btn-primary {
+    @apply px-6 py-2 bg-gradient-to-r from-purple-600 to-indigo-600 rounded-lg font-medium transition-all hover:scale-105 active:scale-95 shadow-lg shadow-purple-500/30;
+  }
+  
+  .btn-ghost {
+    @apply px-4 py-2 bg-white/5 hover:bg-white/10 rounded-lg transition-all;
+  }
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  @apply bg-transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  @apply bg-white/10 rounded-full hover:bg-white/20;
+}
