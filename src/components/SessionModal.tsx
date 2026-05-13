@@ -6,7 +6,21 @@
 import React, { useState } from 'react';
 import { motion } from 'motion/react';
 import { format, getDay } from 'date-fns';
-import { X, Calendar as CalendarIcon, Clock, MessageSquare, User, Save, CheckCircle, AlertTriangle, Pin } from 'lucide-react';
+import { 
+  X, 
+  Calendar as CalendarIcon, 
+  Clock, 
+  MessageSquare, 
+  User, 
+  Save, 
+  CheckCircle, 
+  AlertTriangle, 
+  Pin,
+  BookOpen,
+  Camera,
+  Trash2,
+  Image as ImageIcon
+} from 'lucide-react';
 import { Session, Student } from '../types';
 import { toast } from 'sonner';
 import { cn } from '../lib/utils';
@@ -24,8 +38,38 @@ export default function SessionModal({ date, session, user, onClose, onSave }: S
   const [taught, setTaught] = useState(session ? session.taught : true);
   const [duration, setDuration] = useState(session ? session.duration.toString() : '1.5');
   const [notes, setNotes] = useState(session ? session.notes : '');
+  const [homework, setHomework] = useState(session?.homework || '');
+  const [classNotes, setClassNotes] = useState<string[]>(session?.classNotes || []);
 
   const isExtraDay = !SCHEDULED_DAYS.includes(getDay(date));
+
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files) return;
+
+    Array.from(files).forEach((file: File) => {
+      if (!file.type.startsWith('image/')) {
+        toast.error(`${file.name} is not an image`);
+        return;
+      }
+      
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const base64String = reader.result as string;
+        // Check size (rough check for localStorage)
+        if (base64String.length > 500000) { // ~500KB
+           toast.error("Image too large. Please use a smaller photo.");
+           return;
+        }
+        setClassNotes(prev => [...prev, base64String]);
+      };
+      reader.readAsDataURL(file);
+    });
+  };
+
+  const removeImage = (index: number) => {
+    setClassNotes(prev => prev.filter((_, i) => i !== index));
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -38,6 +82,8 @@ export default function SessionModal({ date, session, user, onClose, onSave }: S
       taught,
       duration: taught ? parseFloat(duration) : 0,
       notes,
+      homework,
+      classNotes,
       loggedBy: user.name,
       isExtra: isExtraDay && taught
     });
@@ -165,6 +211,58 @@ export default function SessionModal({ date, session, user, onClose, onSave }: S
               className="w-full bg-white/5 border border-white/10 rounded-2xl py-3 px-4 focus:ring-2 focus:ring-indigo-500 outline-none min-h-[100px] resize-none"
               placeholder="e.g. স্যার অনেক ভালো করে পড়িয়েছেন..."
             />
+          </div>
+
+          <div className="space-y-4">
+            <label className="block text-sm font-bold text-white/50 uppercase tracking-[0.2em] flex items-center gap-2">
+              <BookOpen className="w-4 h-4 text-indigo-400" /> Homework (HW)
+            </label>
+            <textarea
+              value={homework}
+              onChange={(e) => setHomework(e.target.value)}
+              className="w-full bg-white/5 border border-white/10 rounded-2xl py-3 px-4 focus:ring-2 focus:ring-indigo-500 outline-none min-h-[80px] resize-none"
+              placeholder="e.g. Math Page 42, Reading Chapter 3..."
+            />
+          </div>
+
+          <div className="space-y-4">
+            <label className="block text-sm font-bold text-white/50 uppercase tracking-[0.2em] flex items-center gap-2">
+              <Camera className="w-4 h-4 text-indigo-400" /> Class Notes (Photos)
+            </label>
+            
+            <div className="grid grid-cols-3 gap-3">
+              {classNotes.map((img, idx) => (
+                <div key={idx} className="relative aspect-square rounded-xl overflow-hidden group">
+                  <img src={img} alt={`Note ${idx}`} className="w-full h-full object-cover" />
+                  <button
+                    type="button"
+                    onClick={() => removeImage(idx)}
+                    className="absolute top-1 right-1 p-1 bg-red-500 rounded-lg opacity-0 group-hover:opacity-100 transition-all"
+                  >
+                    <Trash2 className="w-3 h-3 text-white" />
+                  </button>
+                </div>
+              ))}
+              <label 
+                className={cn(
+                  "aspect-square rounded-xl border border-dashed border-white/20 flex flex-col items-center justify-center gap-1 cursor-pointer hover:bg-white/5 hover:border-indigo-500/50 transition-all",
+                  classNotes.length >= 6 && "hidden"
+                )}
+              >
+                <ImageIcon className="w-6 h-6 text-white/20" />
+                <span className="text-[10px] text-white/40 font-bold uppercase">Add Photo</span>
+                <input 
+                  type="file" 
+                  accept="image/*" 
+                  multiple 
+                  className="hidden" 
+                  onChange={handleFileUpload} 
+                />
+              </label>
+            </div>
+            {classNotes.length > 0 && (
+              <p className="text-[10px] text-white/20 text-center italic">Max 6 photos. Keep files small for speed.</p>
+            )}
           </div>
 
           <div className="pt-4 border-t border-white/10">

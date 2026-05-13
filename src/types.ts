@@ -10,6 +10,17 @@ export interface Session {
   notes: string;
   updatedAt: number;
   isExtra?: boolean;
+  homework?: string;
+  classNotes?: string[]; // Array of base64 image strings
+}
+
+export interface HomeworkItem {
+  id: string;
+  task: string;
+  dueDate: string;
+  submissionDate?: string;
+  isCompleted: boolean;
+  createdAt: number;
 }
 
 export interface MonthSessions {
@@ -20,6 +31,7 @@ export interface TutorStorage {
   sessions: {
     [month: string]: MonthSessions; // YYYY-MM
   };
+  homeworks?: HomeworkItem[];
 }
 
 export interface Student {

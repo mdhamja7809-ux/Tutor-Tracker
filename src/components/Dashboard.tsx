@@ -32,9 +32,16 @@ import {
   History, 
   Target,
   Flame,
-  MessageSquareQuote
+  MessageSquareQuote,
+  BookOpen,
+  ClipboardList,
+  Eye,
+  Plus,
+  Trash2,
+  ExternalLink,
+  X
 } from 'lucide-react';
-import { TutorStorage, Student, Session } from '../types';
+import { TutorStorage, Student, Session, HomeworkItem, MonthSessions } from '../types';
 import { BENGALI_WEEKDAYS, SCHEDULED_DAYS } from '../constants';
 import SessionModal from './SessionModal';
 import { cn } from '../lib/utils';
@@ -43,14 +50,48 @@ interface DashboardProps {
   data: TutorStorage;
   user: Student;
   onUpdateSession: (monthKey: string, dateKey: string, sessionData: any) => void;
+  onUpdateHomework: (homeworks: HomeworkItem[]) => void;
 }
 
-export default function Dashboard({ data, user, onUpdateSession }: DashboardProps) {
+export default function Dashboard({ data, user, onUpdateSession, onUpdateHomework }: DashboardProps) {
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+  const [selectedPhotos, setSelectedPhotos] = useState<string[] | null>(null);
 
   const monthKey = format(currentMonth, 'yyyy-MM');
   const today = startOfToday();
+
+  const handleAddHomework = () => {
+    const task = prompt("HW Task Description:");
+    if (!task) return;
+    const dueDate = prompt("Due Date (e.g. Saturday 5pm or 2026-05-15):") || "TBD";
+    const submissionDate = prompt("Submission Date (optional):") || "";
+    
+    const newItem: HomeworkItem = {
+      id: Math.random().toString(36).substr(2, 9),
+      task,
+      dueDate,
+      submissionDate,
+      isCompleted: false,
+      createdAt: Date.now()
+    };
+    
+    onUpdateHomework([...(data.homeworks || []), newItem]);
+  };
+
+  const toggleHW = (id: string) => {
+    const updated = (data.homeworks || []).map(hw => 
+      hw.id === id ? { ...hw, isCompleted: !hw.isCompleted } : hw
+    );
+    onUpdateHomework(updated);
+  };
+
+  const deleteHW = (id: string) => {
+    if (confirm("Delete this HW?")) {
+      const updated = (data.homeworks || []).filter(hw => hw.id !== id);
+      onUpdateHomework(updated);
+    }
+  };
 
   // Calendar Helpers
   const daysInMonth = useMemo(() => {
@@ -60,7 +101,7 @@ export default function Dashboard({ data, user, onUpdateSession }: DashboardProp
     });
   }, [currentMonth]);
 
-  const sessions = data.sessions[monthKey] || {};
+  const sessions = (data.sessions[monthKey] || {}) as MonthSessions;
 
   // Scheduled Days Logic
   const isScheduled = (date: Date) => SCHEDULED_DAYS.includes(getDay(date));
@@ -68,7 +109,7 @@ export default function Dashboard({ data, user, onUpdateSession }: DashboardProp
   // Stats Calculation
   const stats = useMemo(() => {
     const scheduledDays = daysInMonth.filter(isScheduled);
-    const sessionEntries = Object.entries(sessions);
+    const sessionEntries = Object.entries(sessions) as [string, Session][];
     
     const taughtSessions = sessionEntries.filter(([_, s]) => s.taught);
     const absentSessions = sessionEntries.filter(([date, s]) => !s.taught && isScheduled(new Date(date)));
@@ -94,10 +135,10 @@ export default function Dashboard({ data, user, onUpdateSession }: DashboardProp
   // Streak Counter
   const streak = useMemo(() => {
     let count = 0;
-    // We check all logged sessions across all months, but for simplicity let's check current and previous month
-    // Real implementation would flatten all sessions
-    const sortedAllDates = Object.entries(data.sessions)
-      .flatMap(([mKey, mSessions]) => Object.entries(mSessions).map(([dKey, s]) => ({ date: new Date(dKey), ...s })))
+    // We check all logged sessions across all months
+    const allMonths = Object.values(data.sessions) as MonthSessions[];
+    const sortedAllDates = allMonths
+      .flatMap(mSessions => Object.entries(mSessions).map(([dKey, s]) => ({ date: new Date(dKey), ...s })))
       .sort((a, b) => b.date.getTime() - a.date.getTime());
 
     for (const s of sortedAllDates) {
@@ -412,6 +453,93 @@ export default function Dashboard({ data, user, onUpdateSession }: DashboardProp
             </div>
           </div>
 
+          {/* Homework (HW) Management Card */}
+          <div className="glass rounded-3xl p-6 flex flex-col max-h-[400px]">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-sm font-semibold text-white/50 uppercase tracking-[0.2em] flex items-center gap-2">
+                <ClipboardList className="w-4 h-4" />
+                Homework (বাকি কাজ)
+              </h3>
+              <button 
+                onClick={handleAddHomework}
+                className="p-1.5 hover:bg-white/10 rounded-lg text-indigo-400 transition-all active:scale-95 border border-white/5"
+              >
+                <Plus className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto space-y-3 pr-1 custom-scrollbar">
+              {(!data.homeworks || data.homeworks.length === 0) ? (
+                <div className="text-center py-6">
+                  <p className="text-xs text-white/20 italic">No active HW</p>
+                </div>
+              ) : (
+                data.homeworks.sort((a, b) => b.createdAt - a.createdAt).map(hw => {
+                  const isTodayStr = hw.dueDate.toLowerCase().includes('today');
+                  const isTomorrowStr = hw.dueDate.toLowerCase().includes('tomorrow');
+                  
+                  // Simple check for YYYY-MM-DD format if present
+                  const dateMatch = hw.dueDate.match(/\d{4}-\d{2}-\d{2}/);
+                  const isTodayDate = dateMatch && dateMatch[0] === format(today, 'yyyy-MM-dd');
+                  const isTomorrowDate = dateMatch && dateMatch[0] === format(new Date(today.getTime() + 86400000), 'yyyy-MM-dd');
+
+                  const isUrgent = isTodayStr || isTodayDate || isTomorrowStr || isTomorrowDate;
+
+                  return (
+                    <div key={hw.id} className={cn(
+                      "p-4 rounded-2xl border transition-all group flex flex-col gap-3",
+                      hw.isCompleted 
+                        ? "bg-white/5 border-white/5 opacity-50" 
+                        : isUrgent 
+                          ? "bg-orange-500/10 border-orange-500/30 ring-1 ring-orange-500/20" 
+                          : "bg-indigo-500/5 border-indigo-500/20"
+                    )}>
+                      <div className="flex items-start justify-between gap-3">
+                        <button onClick={() => toggleHW(hw.id)} className="shrink-0 mt-0.5">
+                          {hw.isCompleted ? <CheckCircle2 className="w-5 h-5 text-emerald-500" /> : <div className="w-5 h-5 rounded-md border-2 border-white/20 hover:border-indigo-400 transition-colors" />}
+                        </button>
+                        <div className="flex-1 min-w-0">
+                          <p className={cn(
+                            "text-sm font-medium leading-relaxed break-words whitespace-pre-wrap", 
+                            hw.isCompleted && "line-through text-white/40"
+                          )}>
+                            {hw.task}
+                          </p>
+                        </div>
+                        <button onClick={() => deleteHW(hw.id)} className="p-1.5 opacity-0 group-hover:opacity-100 text-white/20 hover:text-red-400 transition-all">
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                      
+                      <div className="flex flex-wrap items-center gap-3 pt-2 border-t border-white/5">
+                        <div className={cn(
+                          "flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-tight",
+                          isUrgent ? "bg-orange-500 text-white" : "bg-white/5 text-white/40"
+                        )}>
+                          <Clock className="w-3 h-3" />
+                          Due: {hw.dueDate}
+                        </div>
+                        
+                        {hw.submissionDate && (
+                          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-indigo-500/20 text-indigo-300 text-[10px] font-bold uppercase tracking-tight">
+                            <Plus className="w-3 h-3" />
+                            Submit: {hw.submissionDate}
+                          </div>
+                        )}
+                        
+                        {!hw.isCompleted && isUrgent && (
+                          <span className="text-[10px] font-black text-orange-400 uppercase tracking-widest animate-pulse">
+                            Action Needed
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          </div>
+
           {/* Recent Activity Card */}
           <div className="glass rounded-3xl p-6 flex flex-col flex-1 overflow-hidden">
             <h3 className="text-sm font-semibold text-white/50 uppercase tracking-[0.2em] mb-6 flex items-center gap-2">
@@ -438,6 +566,24 @@ export default function Dashboard({ data, user, onUpdateSession }: DashboardProp
                         {s.taught ? `সময়: ${s.duration} ঘণ্টা` : 'বন্ধ ছিল'} • Logged by {s.loggedBy}
                       </p>
                       {s.notes && <p className="text-[11px] text-white/60 mt-1 italic line-clamp-1">"{s.notes}"</p>}
+                      
+                      {(s.homework || (s.classNotes && s.classNotes.length > 0)) && (
+                        <div className="flex flex-wrap gap-2 mt-2">
+                          {s.homework && (
+                            <div className="flex items-center gap-1 px-2 py-0.5 bg-indigo-500/10 text-indigo-400 rounded-md text-[9px] font-bold uppercase border border-indigo-500/20">
+                              <BookOpen className="w-2.5 h-2.5" /> HW Assigned
+                            </div>
+                          )}
+                          {s.classNotes && s.classNotes.length > 0 && (
+                            <button
+                              onClick={() => setSelectedPhotos(s.classNotes!)}
+                              className="flex items-center gap-1 px-2 py-0.5 bg-emerald-500/10 text-emerald-400 rounded-md text-[9px] font-bold uppercase border border-emerald-500/20 hover:bg-emerald-500/20 transition-all"
+                            >
+                              <Eye className="w-2.5 h-2.5" /> {s.classNotes.length} Class Note{s.classNotes.length > 1 ? 's' : ''}
+                            </button>
+                          )}
+                        </div>
+                      )}
                     </div>
                   </div>
                 ))
@@ -460,6 +606,45 @@ export default function Dashboard({ data, user, onUpdateSession }: DashboardProp
               setSelectedDate(null);
             }}
           />
+        )}
+      </AnimatePresence>
+      
+      {/* Photo Viewer Modal */}
+      <AnimatePresence>
+        {selectedPhotos && (
+          <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 md:p-10 bg-black/90 backdrop-blur-md">
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.9 }}
+              className="relative w-full max-w-5xl h-full flex flex-col"
+            >
+              <button 
+                onClick={() => setSelectedPhotos(null)}
+                className="absolute -top-12 right-0 p-2 text-white/50 hover:text-white transition-all flex items-center gap-2 text-sm font-bold uppercase tracking-widest"
+              >
+                Close <X className="w-6 h-6" />
+              </button>
+              
+              <div className="flex-1 overflow-y-auto space-y-8 pr-4 custom-scrollbar">
+                {selectedPhotos.map((photo, i) => (
+                  <div key={i} className="relative rounded-2xl overflow-hidden border border-white/10 shadow-2xl">
+                    <img src={photo} alt={`Class Note ${i}`} className="w-full h-auto" />
+                    <div className="absolute top-4 left-4 px-3 py-1 bg-black/50 backdrop-blur-md rounded-full text-[10px] font-bold text-white/80 border border-white/10 uppercase tracking-widest">
+                      Note Page {i + 1}
+                    </div>
+                    <a 
+                      href={photo} 
+                      download={`class-note-${i+1}.png`}
+                      className="absolute top-4 right-4 p-2 bg-white/10 hover:bg-indigo-500 rounded-full backdrop-blur-md transition-all text-white"
+                    >
+                      <ExternalLink className="w-4 h-4" />
+                    </a>
+                  </div>
+                ))}
+              </div>
+            </motion.div>
+          </div>
         )}
       </AnimatePresence>
 

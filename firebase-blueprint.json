@@ -1,0 +1,46 @@
+{
+  "entities": {
+    "Session": {
+      "title": "Session",
+      "description": "A tutoring session log",
+      "type": "object",
+      "properties": {
+        "taught": { "type": "boolean" },
+        "duration": { "type": "number" },
+        "notes": { "type": "string" },
+        "loggedBy": { "type": "string" },
+        "updatedAt": { "type": "number" },
+        "isExtra": { "type": "boolean" },
+        "homework": { "type": "string" },
+        "classNotes": {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      },
+      "required": ["taught", "duration", "notes", "loggedBy", "updatedAt"]
+    },
+    "Homework": {
+      "title": "Homework",
+      "description": "A homework task with due date",
+      "type": "object",
+      "properties": {
+        "task": { "type": "string" },
+        "dueDate": { "type": "string" },
+        "submissionDate": { "type": "string" },
+        "isCompleted": { "type": "boolean" },
+        "createdAt": { "type": "number" }
+      },
+      "required": ["task", "dueDate", "isCompleted", "createdAt"]
+    }
+  },
+  "firestore": {
+    "sessions/{date}": {
+      "schema": "Session",
+      "description": "Log of sessions keyed by YYYY-MM-DD"
+    },
+    "homeworks": {
+      "schema": "Homework",
+      "description": "Collection of global homework tasks"
+    }
+  }
+}

@@ -7,9 +7,12 @@ import { useState, useEffect, useMemo } from 'react';
 import { Toaster, toast } from 'sonner';
 import { motion, AnimatePresence } from 'motion/react';
 import { LogOut, User } from 'lucide-react';
-import { AuthState, TutorStorage, Student } from './types';
+import { collection, doc, setDoc, deleteDoc, onSnapshot, query, getDocs, writeBatch } from 'firebase/firestore';
+import { AuthState, TutorStorage, Student, Session, HomeworkItem } from './types';
 import { STUDENTS, STORAGE_KEY, AUTH_STORAGE_KEY } from './constants';
 import { cn } from './lib/utils';
+import { db } from './lib/firebase';
+import { handleFirestoreError, OperationType } from './lib/firestoreUtils';
 import Login from './components/Login';
 import Dashboard from './components/Dashboard';
 
@@ -19,22 +22,81 @@ export default function App() {
     return saved ? JSON.parse(saved) : { isAuthenticated: false, user: null };
   });
 
-  const [data, setData] = useState<TutorStorage>(() => {
-    const saved = localStorage.getItem(STORAGE_KEY);
-    if (saved) return JSON.parse(saved);
-    return { sessions: {} };
-  });
+  const [data, setData] = useState<TutorStorage>({ sessions: {}, homeworks: [] });
+  const [isDataLoaded, setIsDataLoaded] = useState(false);
 
-  // Keep localStorage in sync across tabs
+  // Sync with Firestore
   useEffect(() => {
-    const handleStorage = (e: StorageEvent) => {
-      if (e.key === STORAGE_KEY && e.newValue) {
-        setData(JSON.parse(e.newValue));
+    const sessionsQuery = query(collection(db, 'sessions'));
+    const homeworksQuery = query(collection(db, 'homeworks'));
+
+    const unsubSessions = onSnapshot(sessionsQuery, (snapshot) => {
+      setData(prev => {
+        const newSessions: { [month: string]: { [date: string]: Session } } = {};
+        snapshot.docs.forEach(docSnap => {
+          const dateKey = docSnap.id;
+          const session = docSnap.data() as Session;
+          const monthKey = dateKey.substring(0, 7); // YYYY-MM
+          if (!newSessions[monthKey]) newSessions[monthKey] = {};
+          newSessions[monthKey][dateKey] = session;
+        });
+        return { ...prev, sessions: newSessions };
+      });
+      setIsDataLoaded(true);
+    }, (err) => handleFirestoreError(err, OperationType.LIST, 'sessions'));
+
+    const unsubHomeworks = onSnapshot(homeworksQuery, (snapshot) => {
+      const homeworks = snapshot.docs.map(docSnap => ({
+        id: docSnap.id,
+        ...docSnap.data()
+      })) as HomeworkItem[];
+      setData(prev => ({ ...prev, homeworks }));
+    }, (err) => handleFirestoreError(err, OperationType.LIST, 'homeworks'));
+
+    return () => {
+      unsubSessions();
+      unsubHomeworks();
+    };
+  }, []);
+
+  // Initial Migration from LocalStorage (one-time)
+  useEffect(() => {
+    const migrate = async () => {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      if (saved && !isDataLoaded) {
+        const localData = JSON.parse(saved) as TutorStorage;
+        const batch = writeBatch(db);
+        let count = 0;
+
+        // Migrate sessions
+        Object.entries(localData.sessions).forEach(([monthKey, mSessions]) => {
+          Object.entries(mSessions).forEach(([dateKey, session]) => {
+            const docRef = doc(db, 'sessions', dateKey);
+            batch.set(docRef, session);
+            count++;
+          });
+        });
+
+        // Migrate homeworks
+        if (localData.homeworks) {
+          localData.homeworks.forEach(hw => {
+            const docRef = doc(db, 'homeworks', hw.id);
+            const { id, ...rest } = hw;
+            batch.set(docRef, rest);
+            count++;
+          });
+        }
+
+        if (count > 0) {
+          await batch.commit();
+          toast.success("Migrated local data to cloud sync!");
+        }
+        localStorage.removeItem(STORAGE_KEY);
       }
     };
-    window.addEventListener('storage', handleStorage);
-    return () => window.removeEventListener('storage', handleStorage);
-  }, []);
+    
+    if (isDataLoaded) migrate();
+  }, [isDataLoaded]);
 
   const handleLogin = (user: Student) => {
     const newState = { isAuthenticated: true, user };
@@ -50,24 +112,50 @@ export default function App() {
     toast.info("Logged out successfully");
   };
 
-  const updateSession = (monthKey: string, dateKey: string, sessionData: any) => {
-    setData((prev) => {
-      const newData = {
-        ...prev,
-        sessions: {
-          ...prev.sessions,
-          [monthKey]: {
-            ...(prev.sessions[monthKey] || {}),
-            [dateKey]: {
-              ...sessionData,
-              updatedAt: Date.now(),
-            },
-          },
-        },
-      };
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(newData));
-      return newData;
-    });
+  const updateSession = async (monthKey: string, dateKey: string, sessionData: any) => {
+    try {
+      const docRef = doc(db, 'sessions', dateKey);
+      await setDoc(docRef, {
+        ...sessionData,
+        updatedAt: Date.now(),
+      });
+    } catch (err) {
+      handleFirestoreError(err, OperationType.WRITE, `sessions/${dateKey}`);
+    }
+  };
+
+  const updateHomework = async (homeworks: HomeworkItem[]) => {
+    try {
+      // For homeworks, it's easier to just sync the specific change, but the prompt passed the whole list
+      // So let's compare and update Firestore
+      const batch = writeBatch(db);
+      
+      // Since Dashboard passes the full new list, we need to handle deletes too
+      // However, for simplicity in a shared tracker, we'll just write the latest state
+      // Actually, a better API would be addHomework, deleteHomework, toggleHomework
+      // But we follow the existing props pattern for now.
+      
+      // Let's just find the items that changed
+      const currentHwIds = new Set(data.homeworks?.map(h => h.id) || []);
+      const newHwIds = new Set(homeworks.map(h => h.id));
+
+      // Deletes
+      data.homeworks?.forEach(hw => {
+        if (!newHwIds.has(hw.id)) {
+          batch.delete(doc(db, 'homeworks', hw.id));
+        }
+      });
+
+      // Updates/Adds
+      homeworks.forEach(hw => {
+        const { id, ...rest } = hw;
+        batch.set(doc(db, 'homeworks', id), rest);
+      });
+
+      await batch.commit();
+    } catch (err) {
+      handleFirestoreError(err, OperationType.WRITE, 'homeworks');
+    }
   };
 
   if (!auth.isAuthenticated) {
@@ -143,6 +231,7 @@ export default function App() {
           data={data} 
           user={auth.user!} 
           onUpdateSession={updateSession} 
+          onUpdateHomework={updateHomework}
         />
       </main>
 

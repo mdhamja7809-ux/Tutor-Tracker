@@ -1,0 +1,54 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Global Safety Net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Helper functions
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function isValidSession(data) {
+      return data.keys().hasAll(['taught', 'duration', 'notes', 'loggedBy', 'updatedAt']) 
+        && data.taught is bool
+        && data.duration is number
+        && data.notes is string && data.notes.size() <= 2000
+        && data.loggedBy is string && data.loggedBy.size() <= 50
+        && data.updatedAt is number
+        && (!data.keys().hasAny(['isExtra']) || data.isExtra is bool)
+        && (!data.keys().hasAny(['homework']) || data.homework is string)
+        && (!data.keys().hasAny(['classNotes']) || data.classNotes is list);
+    }
+
+    function isValidHomework(data) {
+      return data.keys().hasAll(['task', 'dueDate', 'isCompleted', 'createdAt'])
+        && data.task is string && data.task.size() <= 1000
+        && data.dueDate is string && data.dueDate.size() <= 100
+        && data.isCompleted is bool
+        && data.createdAt is number
+        && (!data.keys().hasAny(['submissionDate']) || (data.submissionDate is string && data.submissionDate.size() <= 100));
+    }
+
+    match /sessions/{date} {
+      allow get: if isSignedIn();
+      allow list: if isSignedIn();
+      allow create: if isSignedIn() && isValidId(date) && isValidSession(request.resource.data);
+      allow update: if isSignedIn() && isValidSession(request.resource.data);
+      allow delete: if false; // Sessions should not be deleted for audit
+    }
+
+    match /homeworks/{hwId} {
+      allow get, list: if isSignedIn();
+      allow create: if isSignedIn() && isValidId(hwId) && isValidHomework(request.resource.data);
+      allow update: if isSignedIn() && isValidHomework(request.resource.data);
+      allow delete: if isSignedIn();
+    }
+  }
+}
