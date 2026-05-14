@@ -39,6 +39,9 @@ export interface Student {
   username: string;
   passwordHash: string;
   color: string;
+  idNumber?: string;
+  grade?: string;
+  joiningDate?: string;
 }
 
 export interface AuthState {

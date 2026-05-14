@@ -1,47 +1,68 @@
 @import "tailwindcss";
-@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800;900&family=Inter:wght@400;500;600;700&display=swap');
 
 @theme {
-  --font-sans: "Poppins", ui-sans-serif, system-ui, sans-serif;
+  --font-sans: "Poppins", "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Poppins", sans-serif;
+  --color-navy: #0f172a;
+  --color-midnight: #1e1b4b;
+  --color-neon-blue: #3b82f6;
+  --color-emerald-accent: #10b981;
 }
 
 :root {
-  --bg-gradient: linear-gradient(135deg, #0f0c29 0%, #302b63 50%, #24243e 100%);
+  --bg-gradient: radial-gradient(at 0% 0%, rgba(59, 130, 246, 0.15) 0, transparent 50%), 
+                 radial-gradient(at 100% 0%, rgba(139, 92, 246, 0.15) 0, transparent 50%);
 }
 
 body {
-  @apply font-sans antialiased text-white min-h-screen;
-  background: var(--bg-gradient);
+  @apply font-sans antialiased text-slate-200 min-h-screen selection:bg-neon-blue/30;
+  background-color: #0f172a;
+  background-image: var(--bg-gradient);
   background-attachment: fixed;
 }
 
 @layer components {
   .glass {
-    @apply bg-white/10 backdrop-blur-lg border border-white/20 shadow-xl;
+    @apply backdrop-blur-[20px] border border-white/10 shadow-2xl;
+    background: rgba(30, 41, 59, 0.7);
   }
   
-  .glass-dark {
-    @apply bg-black/30 backdrop-blur-xl border border-white/10 shadow-2xl;
+  .glass-card {
+    @apply backdrop-blur-[20px] border border-white/10 rounded-[28px] overflow-hidden shadow-2xl;
+    background: rgba(30, 41, 59, 0.7);
   }
 
-  .btn-primary {
-    @apply px-6 py-2 bg-gradient-to-r from-purple-600 to-indigo-600 rounded-lg font-medium transition-all hover:scale-105 active:scale-95 shadow-lg shadow-purple-500/30;
+  .btn-glass {
+    @apply px-6 py-3 rounded-2xl font-bold transition-all hover:scale-[1.02] active:scale-95 shadow-lg flex items-center justify-center gap-2;
+    box-shadow: 0 0 15px rgba(59, 130, 246, 0.3);
   }
-  
-  .btn-ghost {
-    @apply px-4 py-2 bg-white/5 hover:bg-white/10 rounded-lg transition-all;
+
+  .shimmer {
+    @apply relative after:absolute after:inset-0 after:-translate-x-full after:animate-[shimmer_2s_infinite] after:bg-gradient-to-r after:from-transparent after:via-white/10 after:to-transparent;
+    overflow: hidden;
   }
+}
+
+@keyframes shimmer {
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+.font-display {
+  font-family: var(--font-display);
 }
 
 /* Custom Scrollbar */
-::-webkit-scrollbar {
+.custom-scrollbar::-webkit-scrollbar {
   width: 6px;
 }
 
-::-webkit-scrollbar-track {
+.custom-scrollbar::-webkit-scrollbar-track {
   @apply bg-transparent;
 }
 
-::-webkit-scrollbar-thumb {
+.custom-scrollbar::-webkit-scrollbar-thumb {
   @apply bg-white/10 rounded-full hover:bg-white/20;
 }

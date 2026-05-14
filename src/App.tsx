@@ -6,7 +6,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Toaster, toast } from 'sonner';
 import { motion, AnimatePresence } from 'motion/react';
-import { LogOut, User } from 'lucide-react';
+import { LogOut, User, Calendar as CalendarIcon, ClipboardList, History } from 'lucide-react';
 import { collection, doc, setDoc, deleteDoc, onSnapshot, query, getDocs, writeBatch, limit, getDoc } from 'firebase/firestore';
 import { AuthState, TutorStorage, Student, Session, HomeworkItem } from './types';
 import { STUDENTS, STORAGE_KEY, AUTH_STORAGE_KEY } from './constants';
@@ -18,10 +18,11 @@ import Dashboard from './components/Dashboard';
 
 export default function App() {
   const [auth, setAuth] = useState<AuthState>(() => {
-    const saved = sessionStorage.getItem(AUTH_STORAGE_KEY);
+    const saved = localStorage.getItem(AUTH_STORAGE_KEY);
     return saved ? JSON.parse(saved) : { isAuthenticated: false, user: null };
   });
 
+  const [activeTab, setActiveTab] = useState('home');
   const [data, setData] = useState<TutorStorage>({ sessions: {}, homeworks: [] });
   const [isDataLoaded, setIsDataLoaded] = useState(false);
 
@@ -131,14 +132,14 @@ export default function App() {
   const handleLogin = (user: Student) => {
     const newState = { isAuthenticated: true, user };
     setAuth(newState);
-    sessionStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(newState));
+    localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(newState));
     toast.success(`Welcome back, ${user.name}!`);
   };
 
   const handleLogout = () => {
     const newState = { isAuthenticated: false, user: null };
     setAuth(newState);
-    sessionStorage.removeItem(AUTH_STORAGE_KEY);
+    localStorage.removeItem(AUTH_STORAGE_KEY);
     toast.info("Logged out successfully");
   };
 
@@ -198,75 +199,128 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen relative flex flex-col">
       <Toaster position="top-right" richColors theme="dark" />
       
-      {/* Navbar */}
-      <nav className="sticky top-0 z-50 h-16 px-4 md:px-8 flex items-center justify-between border-b border-white/10 backdrop-blur-md bg-black/20 flex-shrink-0">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-indigo-500 rounded-lg flex items-center justify-center font-bold text-xl shadow-lg shadow-indigo-500/20">
+      {/* Top Header: Specs match "Left-aligned logo 'T', right-aligned profile 'H' with a circular neon border" */}
+      <nav className="sticky top-0 z-50 h-20 px-6 md:px-12 flex items-center justify-between border-b border-white/5 backdrop-blur-2xl bg-navy/60">
+        <div className="flex items-center gap-4 group cursor-pointer" onClick={() => setActiveTab('home')}>
+          <div className="w-12 h-12 bg-neon-blue rounded-2xl flex items-center justify-center font-bold text-2xl shadow-xl shadow-neon-blue/40 group-hover:scale-105 transition-transform font-display text-white">
             T
           </div>
-          <h1 className="text-xl font-semibold tracking-tight uppercase">
-            Tutor<span className="text-indigo-400">Track</span>
+          <h1 className="text-xl font-extrabold tracking-tighter uppercase font-display hidden sm:block">
+            Tutor<span className="text-neon-blue">Track</span>
           </h1>
         </div>
 
-        <div className="flex items-center gap-4 md:gap-8">
-          {/* Streak Counter in Nav for all students to see */}
-          {(() => {
-            let streakCount = 0;
-            const sortedAllDates = Object.entries(data.sessions)
-              .flatMap(([_, mSessions]) => Object.entries(mSessions).map(([dKey, s]) => ({ date: new Date(dKey), ...s })))
-              .sort((a, b) => b.date.getTime() - a.date.getTime());
-
-            for (const s of sortedAllDates) {
-              if (s.taught) streakCount++;
-              else break;
-            }
-
-            return streakCount > 0 ? (
-              <div className="hidden sm:flex items-center gap-2 bg-white/10 px-3 py-1.5 rounded-full border border-white/5">
-                <span className="text-orange-400">🔥</span>
-                <span className="text-sm font-medium tracking-wide">টানা {streakCount} দিন পড়ানো হয়েছে</span>
-              </div>
-            ) : null;
-          })()}
-
-          <div className="flex items-center gap-4 border-l border-white/10 pl-4 md:pl-8">
-            <div className="text-right hidden xs:block">
-              <p className="text-sm font-semibold">{auth.user?.name}</p>
-              <p className="text-[10px] text-white/40 uppercase tracking-widest">Student</p>
+        <div className="flex items-center gap-6">
+          {/* User Profile spec: right-aligned profile 'H' with a circular neon border */}
+          <div className="flex items-center gap-4">
+            <div className="text-right hidden sm:block">
+              <p className="text-xs font-bold text-white uppercase tracking-widest leading-none">{auth.user?.name}</p>
+              <p className="text-[10px] font-medium text-neon-blue uppercase tracking-[0.2em] mt-1">{auth.user?.grade}</p>
             </div>
             <div className={cn(
-              "w-10 h-10 rounded-full flex items-center justify-center border-2 border-white/20 font-bold shadow-inner text-white",
-              auth.user?.color || "bg-gradient-to-tr from-purple-500 to-pink-500"
+              "w-12 h-12 rounded-full flex items-center justify-center font-black text-xl border-2 shadow-[0_0_15px_rgba(59,130,246,0.3)] text-white transition-transform hover:scale-110 cursor-pointer",
+              auth.user?.color || "bg-midnight",
+              "border-neon-blue"
             )}>
               {auth.user?.name.charAt(0)}
             </div>
-            
-            <button 
-              onClick={handleLogout}
-              className="p-2 hover:bg-white/10 rounded-full transition-colors text-white/70 hover:text-white"
-              title="Logout"
-            >
-              <LogOut className="w-5 h-5" />
-            </button>
           </div>
         </div>
       </nav>
 
-      <main className="container mx-auto px-4 py-8">
+      <main className="flex-1 container mx-auto px-4 py-8 pb-32 lg:pb-12">
         <Dashboard 
           data={data} 
           user={auth.user!} 
           onUpdateSession={updateSession} 
           onUpdateHomework={updateHomework}
+          activeTab={activeTab}
+          onLogout={handleLogout}
         />
       </main>
 
-      <footer className="py-8 text-center text-white/30 text-sm">
-        &copy; {new Date().getFullYear()} Tutor Session Tracker • Built for Students
+      {/* Bottom Navigation: pill shaped dark container */}
+      <nav className="fixed bottom-8 left-1/2 -translate-x-1/2 z-[60] w-[90%] max-w-md lg:hidden">
+        <div className="flex items-center justify-between bg-midnight/80 backdrop-blur-3xl border border-white/10 rounded-[32px] p-2 shadow-[0_20px_50px_rgba(0,0,0,0.5)]">
+          <button 
+            onClick={() => setActiveTab('home')}
+            className={cn(
+              "flex flex-col items-center gap-1 flex-1 py-3 transition-all rounded-[24px] relative",
+              activeTab === 'home' ? "text-neon-blue" : "text-white/30 hover:text-white/60"
+            )}
+          >
+            {activeTab === 'home' && (
+              <motion.div 
+                layoutId="active-pill" 
+                className="absolute inset-0 bg-white/5 border border-white/10 rounded-[24px]" 
+                transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
+              />
+            )}
+            <CalendarIcon className="w-5 h-5 relative z-10" />
+            <span className="text-[9px] font-bold uppercase tracking-widest relative z-10">Home</span>
+          </button>
+          
+          <button 
+            onClick={() => setActiveTab('homework')}
+            className={cn(
+              "flex flex-col items-center gap-1 flex-1 py-3 transition-all rounded-[24px] relative",
+              activeTab === 'homework' ? "text-neon-blue" : "text-white/30 hover:text-white/60"
+            )}
+          >
+            {activeTab === 'homework' && (
+              <motion.div 
+                layoutId="active-pill" 
+                className="absolute inset-0 bg-white/5 border border-white/10 rounded-[24px]" 
+                transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
+              />
+            )}
+            <ClipboardList className="w-5 h-5 relative z-10" />
+            <span className="text-[9px] font-bold uppercase tracking-widest relative z-10">Work</span>
+          </button>
+          
+          <button 
+            onClick={() => setActiveTab('history')}
+            className={cn(
+              "flex flex-col items-center gap-1 flex-1 py-3 transition-all rounded-[24px] relative",
+              activeTab === 'history' ? "text-neon-blue" : "text-white/30 hover:text-white/60"
+            )}
+          >
+            {activeTab === 'history' && (
+              <motion.div 
+                layoutId="active-pill" 
+                className="absolute inset-0 bg-white/5 border border-white/10 rounded-[24px]" 
+                transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
+              />
+            )}
+            <History className="w-5 h-5 relative z-10" />
+            <span className="text-[9px] font-bold uppercase tracking-widest relative z-10">Recents</span>
+          </button>
+          
+          <button 
+            onClick={() => setActiveTab('profile')}
+            className={cn(
+              "flex flex-col items-center gap-1 flex-1 py-3 transition-all rounded-[24px] relative",
+              activeTab === 'profile' ? "text-neon-blue" : "text-white/30 hover:text-white/60"
+            )}
+          >
+            {activeTab === 'profile' && (
+              <motion.div 
+                layoutId="active-pill" 
+                className="absolute inset-0 bg-white/5 border border-white/10 rounded-[24px]" 
+                transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
+              />
+            )}
+            <User className="w-5 h-5 relative z-10" />
+            <span className="text-[9px] font-bold uppercase tracking-widest relative z-10">User</span>
+          </button>
+        </div>
+      </nav>
+
+      <footer className="py-12 pb-40 lg:pb-12 text-center text-white/20 text-[10px] uppercase font-bold tracking-[0.3em]">
+        &copy; {new Date().getFullYear()} TutorTrack • Global Session Protocol
       </footer>
     </div>
   );
