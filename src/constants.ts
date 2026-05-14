@@ -11,7 +11,7 @@ export const STUDENTS: Student[] = [
     username: 'smj', 
     passwordHash: '8383', 
     color: 'bg-pink-500',
-    idNumber: 'S-2024-001',
+    idNumber: 'S-2026-001',
     grade: 'Grade 10',
     joiningDate: 'Jan 2024'
   },
@@ -20,7 +20,7 @@ export const STUDENTS: Student[] = [
     username: 'amir', 
     passwordHash: 'pass2', 
     color: 'bg-blue-500',
-    idNumber: 'S-2024-002',
+    idNumber: 'H-2026-002',
     grade: 'Grade 10',
     joiningDate: 'Feb 2024'
   },
@@ -29,7 +29,7 @@ export const STUDENTS: Student[] = [
     username: 'kotha', 
     passwordHash: 'pass3', 
     color: 'bg-purple-500',
-    idNumber: 'S-2024-003',
+    idNumber: 'K-2026-003',
     grade: 'Grade 10',
     joiningDate: 'Mar 2024'
   },
@@ -38,7 +38,7 @@ export const STUDENTS: Student[] = [
     username: 'mishu', 
     passwordHash: 'pass4', 
     color: 'bg-green-500',
-    idNumber: 'S-2024-004',
+    idNumber: 'M-2026-004',
     grade: 'Grade 10',
     joiningDate: 'Apr 2024'
   },
